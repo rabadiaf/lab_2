@@ -1,9 +1,15 @@
 ---
 - name: run commands
   hosts: local
-  become: false
   tasks:
     - name: Create deployment
       shell: kubectl apply -f deployment.yaml
     - name: list files
       shell: ls -l
+    - name: update cache
+      apt:
+        update_cache: true
+    - name: create user
+      user:
+        name: lab_2
+        state: present

@@ -16,6 +16,6 @@ jobs:
       - name: create image
         run: docker build -t rabadiaf/new_image2 .
       - name: upload image to Docker hub
-        run: docker push rabadiaf/new_image:latest
+        run: docker push rabadiaf/new_image2:latest
       - name: Run ansible to create deployment
         run: ansible-playbook -i inventory.ini playbook.yaml
