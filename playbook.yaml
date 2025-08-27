@@ -1,0 +1,9 @@
+---
+- name: run commands
+  hosts: local
+  become: false
+  tasks:
+    - name: Create deployment
+      shell: kubectl apply -f deployment.yaml
+    - name: list files
+      shell: ls -l
