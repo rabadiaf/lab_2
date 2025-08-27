@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
 jobs:
-  image_&_deployment:
+  image_and_deployment:
     runs-on: self-hosted
     steps:
       - name: checkout code
