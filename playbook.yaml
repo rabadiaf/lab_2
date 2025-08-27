@@ -3,7 +3,7 @@
   hosts: local
   tasks:
     - name: Create deployment
-      shell: kubectl apply -f deployment.yaml
+      shell: kubectl apply -f deployment.yml
     - name: list files
       shell: ls -l
     - name: update cache
