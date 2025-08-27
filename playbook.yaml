@@ -1,6 +1,7 @@
 ---
 - name: run commands
   hosts: local
+  become: true
   tasks:
     - name: Create deployment
       shell: kubectl apply -f deployment.yml
