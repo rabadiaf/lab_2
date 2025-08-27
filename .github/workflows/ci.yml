@@ -18,4 +18,4 @@ jobs:
       - name: upload image to Docker hub
         run: docker push rabadiaf/new_image2:latest
       - name: Run ansible to create deployment
-        run: ansible-playbook -i inventory.ini playbook.yaml
+        run: ansible-playbook -i inventory.ini playbook.yaml --ask-become-pass

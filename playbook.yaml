@@ -7,3 +7,7 @@
       shell: kubectl apply -f deployment.yml
     - name: list files
       shell: ls -l
+    - name: create a user
+      user:
+        name: lab_2
+        state: present
