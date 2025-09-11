@@ -1,0 +1,5 @@
+ec2_type   = "t2.micro"
+my_bucket  = "s3-lab-3"
+gft_s3     = "s3-gts"
+aws_region = "us-east-1"
+iam_name   = "rabadiaf"

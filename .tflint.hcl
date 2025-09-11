@@ -1,6 +1,14 @@
+# .tflint.hcl
 
-plugin "aws" {
+plugin "terraform" {
   enabled = true
-  # version = ">= 0.30.0"
-  # source  = "github.com/terraform-linters/tflint-ruleset-aws"
+  # (opcional) fijá versión del ruleset
+  # version = "0.13.0"
+  # o preset general:
+  preset  = "recommended"
+}
+
+# Habilitar explícitamente la regla de variables tipadas
+rule "terraform_typed_variables" {
+  enabled = true
 }

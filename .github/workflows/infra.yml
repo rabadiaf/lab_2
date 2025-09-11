@@ -1,75 +1,73 @@
-
 name: infra-ci
 on: [push, pull_request]
 
+env:
+  TF_DIR: ./terraform   # <-- cambia a ./tf si así se llama tu carpeta
+
 jobs:
-  terraform:
+  tf:
     runs-on: ubuntu-latest
-    env:
-      AWS_ACCESS_KEY_ID: test
-      AWS_SECRET_ACCESS_KEY: test
-      AWS_DEFAULT_REGION: us-east-1
     steps:
       - uses: actions/checkout@v4
-
-      - name: Cache Terraform plugins
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.terraform.d/plugin-cache
-            **/.terraform
-          key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.terraform') }}
-          restore-keys: |
-            ${{ runner.os }}-terraform-
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.7.5
+          terraform_version: 1.9.5
 
-      - name: Terraform fmt & validate
+      - name: Terraform fmt (lint)
         run: |
-          terraform -chdir=./terraform fmt -check
-          terraform -chdir=./terraform init -input=false
-          terraform -chdir=./terraform validate
+          echo "" > /tmp/empty.tfrc
+          TF_CLI_CONFIG_FILE=/tmp/empty.tfrc terraform -chdir=${{ env.TF_DIR }} fmt -check -diff -recursive
+
+      - name: Terraform CLI config (cache + direct)
+        run: |
+          mkdir -p "$HOME/.terraform.d/plugin-cache"
+          cat > "$HOME/.terraformrc" <<RC
+          provider_installation {
+            filesystem_mirror { path = "$HOME/.terraform.d/plugin-cache" }
+            direct {}
+          }
+          RC
+          echo "TF_PLUGIN_CACHE_DIR=$HOME/.terraform.d/plugin-cache" >> "$GITHUB_ENV"
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: ~/.terraform.d/plugin-cache
+          key: ${{ runner.os }}-tf-prov-${{ hashFiles(format('{0}/.terraform.lock.hcl', env.TF_DIR)) }}
+          restore-keys: |
+            ${{ runner.os }}-tf-prov-
+
+      - name: Debug tf module files
+        run: |
+          ls -la ${{ env.TF_DIR }}
+          sed -n '1,160p' ${{ env.TF_DIR }}/provider.tf || true
+          sed -n '1,120p' ${{ env.TF_DIR }}/variables.tf || true
+
+      - name: Terraform init (no backend)
+        run: terraform -chdir=${{ env.TF_DIR }} init -backend=false -input=false
+
+      - name: Terraform validate
+        run: terraform -chdir=${{ env.TF_DIR }} validate -no-color
 
       - name: Install TFLint
         run: |
           curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
-          tflint --version
-          tflint ./terraform || true
+          tflint --init
+          tflint ${{ env.TF_DIR }} || true
 
-      - name: Install tfsec
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install.sh | sh -s -- -b /usr/local/bin
-          tfsec --version
-          tfsec ./terraform || true
+      - name: tfsec (IaC security scan)
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: ${{ env.TF_DIR }}
+          additional_args: --no-color
+        continue-on-error: true
 
       - name: Terraform plan
-        run: |
-          terraform -chdir=./terraform plan -out plan.bin
-          terraform -chdir=./terraform show -no-color plan.bin > plan.txt
+        run: terraform -chdir=${{ env.TF_DIR }} plan -out plan.bin
 
-      - name: Upload plan as artifact
+      - name: Upload plan
         uses: actions/upload-artifact@v4
         with:
-          name: terraform-plan
-          path: |
-            terraform/plan.bin
-            terraform/plan.txt
-
-      - name: Comment plan on PR
-        if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const body = fs.readFileSync('terraform/plan.txt', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: "### Terraform Plan\n```
-" + body.substring(0, 60000) + "
-```"
-            });
+          name: tf-plan
+          path: ${{ env.TF_DIR }}/plan.bin

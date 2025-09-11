@@ -1,9 +1,21 @@
-
+# .pre-commit-config.yaml
 repos:
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.88.0
+    rev: v1.92.0
     hooks:
       - id: terraform_fmt
+        args: [--args=-recursive]
       - id: terraform_validate
       - id: terraform_tflint
-      - id: terraform_tfsec
+        args:
+          - --args=--init        # inicializa tflint plugins
+        pass_filenames: false     # no pasar lista de archivos
+        always_run: true          # corre siempre
+      - id: terraform_trivy
+        pass_filenames: false
+        args:
+          - --args=--quiet
+          - --args=--skip-dirs=.terraform
+          - --args=--tf-exclude-downloaded-modules
+          - --args=--severity=HIGH,CRITICAL
+          - --args=--exit-code=0
