@@ -1,0 +1,75 @@
+
+name: infra-ci
+on: [push, pull_request]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.terraform.d/plugin-cache
+            **/.terraform
+          key: ${{ runner.os }}-terraform-${{ hashFiles('**/*.terraform') }}
+          restore-keys: |
+            ${{ runner.os }}-terraform-
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform fmt & validate
+        run: |
+          terraform -chdir=./terraform fmt -check
+          terraform -chdir=./terraform init -input=false
+          terraform -chdir=./terraform validate
+
+      - name: Install TFLint
+        run: |
+          curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
+          tflint --version
+          tflint ./terraform || true
+
+      - name: Install tfsec
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install.sh | sh -s -- -b /usr/local/bin
+          tfsec --version
+          tfsec ./terraform || true
+
+      - name: Terraform plan
+        run: |
+          terraform -chdir=./terraform plan -out plan.bin
+          terraform -chdir=./terraform show -no-color plan.bin > plan.txt
+
+      - name: Upload plan as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: |
+            terraform/plan.bin
+            terraform/plan.txt
+
+      - name: Comment plan on PR
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('terraform/plan.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: "### Terraform Plan\n```
+" + body.substring(0, 60000) + "
+```"
+            });

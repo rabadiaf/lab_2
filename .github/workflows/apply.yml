@@ -1,0 +1,53 @@
+
+name: infra-apply
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (configure protection rules in Settings > Environments)"
+        required: true
+        default: "dev"
+      confirm:
+        description: "Type EXACTLY: I understand this applies infrastructure"
+        required: true
+        default: "I understand this applies infrastructure"
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'I understand this applies infrastructure' }}
+    environment: ${{ github.event.inputs.environment }}
+    concurrency:
+      group: terraform-apply-${{ github.event.inputs.environment }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.5
+
+      - name: Init & Plan (again, for safety)
+        run: |
+          terraform -chdir=./terraform init -input=false
+          terraform -chdir=./terraform plan -out plan.bin
+          terraform -chdir=./terraform show -no-color plan.bin > plan.txt
+
+      - name: Show plan in summary
+        run: |
+          echo '### Terraform Plan' >> $GITHUB_STEP_SUMMARY
+          echo '\n' >> $GITHUB_STEP_SUMMARY
+          echo '\```' >> $GITHUB_STEP_SUMMARY
+          sed -n '1,4000p' terraform/plan.txt >> $GITHUB_STEP_SUMMARY
+          echo '\```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Apply (auto-approve)
+        run: |
+          terraform -chdir=./terraform apply -auto-approve plan.bin
