@@ -37,3 +37,6 @@ jobs:
 
       - name: Run Ansible deploy
         run: ansible-playbook -i inventory.ini playbook.yaml
+
+      - name: run terraform
+        run: terraform/terraform apply --auto approve
