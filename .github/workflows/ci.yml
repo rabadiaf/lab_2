@@ -38,7 +38,10 @@ jobs:
       - name: Run Ansible deploy
         run: ansible-playbook -i inventory.ini playbook.yaml
 
+      - name: Terraform init
+        working-directory: ./terraform
+        run: terraform init
+
       - name: Terraform apply
-        run: |
-          cd terraform
-          terraform apply -auto-approve
+        working-directory: ./terraform
+        run: terraform apply -auto-approve
