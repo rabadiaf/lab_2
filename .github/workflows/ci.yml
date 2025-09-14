@@ -1,9 +1,14 @@
 name: image and deployment
 on:
+  workflow_run:
+    workflows: ["iac-checks.yml"]   # debe ser exactamente el mismo 'name' del primer workflow
+    types:
+      - completed                     # se dispara al completarseon:
   push:
     branches: [main]
 jobs:
   image_and_deployment:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: self-hosted
     steps:
       - name: checkout code
@@ -14,8 +19,8 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
       - name: create image
-        run: docker build -t rabadiaf/new_image2 .
+        run: docker build -t rabadiaf/new_image3 .
       - name: upload image to Docker hub
-        run: docker push rabadiaf/new_image2:latest
+        run: docker push rabadiaf/new_image3:latest
       - name: Run ansible to create deployment
         run: ansible-playbook -i inventory.ini playbook.yaml
