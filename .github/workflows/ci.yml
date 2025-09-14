@@ -1,7 +1,7 @@
 name: image and deployment
 on:
   workflow_run:
-    workflows: ["iac-checks.yml"]   # debe ser exactamente el mismo 'name' del primer workflow
+    workflows: ["iac-checks"]   # debe ser exactamente el mismo 'name' del primer workflow
     types:
       - completed                     # se dispara al completarseon:
   push:
