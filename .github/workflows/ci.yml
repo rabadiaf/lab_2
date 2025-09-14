@@ -29,11 +29,11 @@ jobs:
       - name: Build image
         run: |
           docker build \
-            -t rabadiaf/new_image3:latest \
+            -t rabadiaf/new_image4:latest \
             .
 
       - name: Push image
-        run: docker push rabadiaf/new_image3:latest
+        run: docker push rabadiaf/new_image4:latest
 
       - name: Run Ansible deploy
         run: ansible-playbook -i inventory.ini playbook.yaml
