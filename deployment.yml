@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-app4
+  name: my-app_nginx
 spec:
   replicas: 1
   selector:
@@ -10,7 +10,7 @@ spec:
   template:
     metadata:
       labels:
-        app: my-app4
+        app: my-app_nginx
     spec:
       containers:
         - name: my-container
